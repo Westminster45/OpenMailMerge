@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description xmlns="http://openoffice.org/extensions/description/2006"
+             xmlns:d="http://openoffice.org/extensions/description/2006"
+             xmlns:lo="http://libreoffice.org/extensions/description/2011"
+             xmlns:xlink="http://www.w3.org/1999/xlink">
+  <identifier value="io.github.mailmergemac"/>
+  <version value="0.1.10"/>
+  <platform value="macosx_aarch64,macosx_x86_64"/>
+  <dependencies>
+    <lo:LibreOffice-minimal-version lo:name="LibreOffice 7.0" lo:value="7.0"/>
+  </dependencies>
+  <display-name>
+    <name lang="en">OpenMailMerge</name>
+  </display-name>
+  <icon>
+    <default xlink:href="images/icon.png"/>
+  </icon>
+  <extension-description>
+    <src lang="en" xlink:href="description/desc_en.txt"/>
+  </extension-description>
+</description>
