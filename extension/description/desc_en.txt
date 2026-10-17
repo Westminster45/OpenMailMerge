@@ -1,0 +1,18 @@
+Mail merge from LibreOffice Writer to Apple Mail on macOS.
+
+Write your letter in Writer, choose a list of recipients, and OpenMailMerge turns it into one personalised email per person, sent from an account you already use in Apple Mail.
+
+- Recipients from a CSV, Excel, Numbers or Calc file.
+- Merge fields («First_Name» or {{First_Name}}) in the letter, subject, Cc, Bcc, Reply-To, PDF name and PDF password, plus DATE, TIME and RECORD_NUMBER.
+- The email keeps the letter's formatting: fonts, colours, lists and links.
+- Attachments for everyone or per recipient, and the letter itself as a PDF, optionally password-protected.
+- A check of every email before anything is created: invalid or duplicate addresses, empty or unknown fields and missing attachments.
+- Show in Mail previews the first email.
+- Create drafts puts every email in your account's Drafts folder to review and send yourself. Nothing is sent.
+- Send sends every email. With "Mail must be offline" ticked, they wait in Mail's Outbox until you take Mail online.
+- Export .eml saves the emails as files only.
+- A typed confirmation for large batches and for every Send, and a log of every email in Documents/OpenMailMerge.
+
+Works with any account enabled in Apple Mail, such as iCloud, Gmail or Outlook.com. OpenMailMerge never signs in or asks for passwords. On first use, macOS asks you to allow LibreOffice to control Mail.
+
+Each run adds a "OpenMailMerge - date" mailbox under On My Mac in Mail. Delete it when you're done.
