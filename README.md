@@ -9,7 +9,7 @@ Write your letter in Writer and choose a list of recipients. OpenMailMerge turns
 - Recipients come from a CSV, Excel, Numbers or Calc file.
 - Merge fields work in the letter, subject, Cc, Bcc, Reply-To, PDF name and PDF password. Write them as `«First_Name»` or `{{First_Name}}`. `DATE`, `TIME` and `RECORD_NUMBER` are built in.
 - The email keeps the letter's formatting: fonts, colours, lists and links.
-- Attachments can go to everyone or be set per recipient. The letter itself can be attached as a PDF, optionally password-protected. Per-recipient attachments are limited to documents, text, HTML, CSV, JSON, zip, spreadsheets, presentations, images, audio and video; other file types (such as code, keys and files with no extension) are blocked.
+- Attachments can go to everyone or be set per recipient. The letter itself can be attached as a PDF, optionally password-protected. Attachments (fixed and per-recipient) are limited to documents, text, HTML, CSV, JSON, zip, spreadsheets, presentations, images, audio and video; other file types (such as code, keys and files with no extension) are blocked.
 - Every email is checked before anything is created: invalid or duplicate addresses, empty or unknown fields, and missing attachments.
 - **Show in Mail** previews the first email.
 - **Create drafts** puts every email in your account's Drafts folder for you to review and send. Nothing is sent.

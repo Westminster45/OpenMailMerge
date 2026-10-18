@@ -45,6 +45,22 @@ class TemplateTests(unittest.TestCase):
     def test_fields_in(self):
         self.assertEqual(template.fields_in("«A» {{B}} «A»"), ["A", "B"])
 
+    def test_drop_meta_removes_document_properties(self):
+        # As LibreOffice's HTML export writes user-defined document properties.
+        keep = ('<!DOCTYPE html>\n<html>\n<head>\n'
+                '\t<meta http-equiv="content-type" content="text/html; charset=utf-8"/>\n'
+                '\t<title>T</title>\n'
+                '\t<meta name="generator" content="LibreOffice"/>')
+        drop = ('\n\t<meta name="MailMergeMacSettings" content="{&quot;pdf_password&quot;: &quot;s3cr&lt;et&gt;&quot;, '
+                '&quot;bcc&quot;: &quot;boss@example.com&quot;, &quot;subject&quot;: &quot;Hi «First_Name»&quot;}"/>'
+                '\n\t<meta name="Other &amp; Prop" content="Zoë"/>'
+                "\n\t<META content='a > b' NAME='Other &amp; Prop'>")
+        rest = ('\n\t<style type="text/css">p { margin: 0 }</style>\n</head>\n'
+                '<body><p>Dear «First_Name», &lt;meta name=&quot;MailMergeMacSettings&quot;&gt;</p></body>\n</html>')
+        out = template.drop_meta(keep + drop + rest, {"MailMergeMacSettings", "Other & Prop"})
+        self.assertEqual(out, keep + rest)
+        self.assertEqual(template.drop_meta(keep + rest, {"generator2"}), keep + rest)
+
 
 class DataTests(unittest.TestCase):
     def test_csv_semicolon_bom_blank_rows(self):
@@ -129,7 +145,7 @@ class MergeAndPreflightTests(unittest.TestCase):
         self.assertIn("Field «Nope» doesn't match any column", text)
         self.assertIn("Field «First_Name» is empty: record 3", text)
         self.assertIn("zoe@example.com is a To address in 2 records", text)
-        self.assertIn("Cc has a fixed address", text)
+        self.assertIn("Every email will also go to boss@example.com (Cc).", text)
 
     def test_attachment_types(self):
         d = Path(self.dir.name)
@@ -143,6 +159,29 @@ class MergeAndPreflightTests(unittest.TestCase):
         self.table.rows[0]["File"] = str(d / "run.py")
         rep = preflight.check(self.s, self.table, "x", "x", now=NOW)
         self.assertIn("Attachment type not allowed", rep.text())
+
+    def test_static_attachment_types(self):
+        d = Path(self.dir.name)
+        for name in ("id_rsa", "secret.pem", "Brochure.PDF"):
+            (d / name).write_bytes(b"x")
+        good, key, pem, gone = (str(d / n) for n in ("Brochure.PDF", "id_rsa", "secret.pem", "gone.pdf"))
+        self.s.attachment_column = ""
+        self.s.static_attachments = [good, key, pem, gone]
+        e = merge.render_email(self.s, self.table.rows[0], 1, "x", "x", now=NOW)
+        self.assertEqual(e.attachments, [good])
+        self.assertEqual(e.blocked_attachments, [key, pem])
+        self.assertEqual(e.missing_attachments, [gone])
+        table = data.from_matrix([["First_Name", "Email"], ["Zoë", "zoe@example.com"]])
+        rep = preflight.check(self.s, table, "x", "x", now=NOW)
+        self.assertFalse(rep.ok)
+        self.assertIn("Attachment type not allowed", rep.text())
+        self.assertIn(key, rep.text())
+        self.assertIn(pem, rep.text())
+        self.s.static_attachments = [good, str(d / "a.pdf")]
+        rep = preflight.check(self.s, table, "x", "x", now=NOW)
+        self.assertTrue(rep.ok, rep.text())
+        self.assertEqual(rep.emails[0].attachments, [good, str(d / "a.pdf")])
+        self.assertEqual(rep.emails[0].blocked_attachments, [])
 
     def test_range_and_exclusions(self):
         self.s.record_from, self.s.record_to = 1, 2

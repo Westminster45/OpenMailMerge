@@ -4,7 +4,7 @@ Pure-Python modules (no UNO): template, data, message, merge, preflight, mailapp
 UNO modules: office (document export, spreadsheets), dialog (user interface).
 """
 
-VERSION = "0.1.10"
+VERSION = "0.1.11"
 
 
 def debug(message):

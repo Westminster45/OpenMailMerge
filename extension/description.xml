@@ -4,7 +4,7 @@
              xmlns:lo="http://libreoffice.org/extensions/description/2011"
              xmlns:xlink="http://www.w3.org/1999/xlink">
   <identifier value="io.github.mailmergemac"/>
-  <version value="0.1.10"/>
+  <version value="0.1.11"/>
   <platform value="macosx_aarch64,macosx_x86_64"/>
   <dependencies>
     <lo:LibreOffice-minimal-version lo:name="LibreOffice 7.0" lo:value="7.0"/>

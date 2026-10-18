@@ -12,6 +12,9 @@ FIELD_RE = re.compile(
 )
 # Any marker left after rendering means a field was split by formatting or mistyped.
 LEFTOVER_RE = re.compile(r"«|»|&laquo;|&raquo;|&#171;|&#187;|&#xab;|&#xbb;|\{\{|\}\}", re.IGNORECASE)
+# A <meta ...> tag (quoted values may contain '>'), with the line break and indent before it.
+META_TAG_RE = re.compile(r"""(?:\r?\n[ \t]*)?<meta\b((?:"[^"]*"|'[^']*'|[^"'>])*)>""", re.IGNORECASE)
+ATTR_RE = re.compile(r"""([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>=`]+)))?""")
 
 BUILTINS = ("DATE", "TIME", "RECORD_NUMBER")
 
@@ -77,3 +80,17 @@ def render(text, row, escape=False, record_number=None, now=None):
 
 def has_leftover_markers(text):
     return bool(LEFTOVER_RE.search(text or ""))
+
+
+def drop_meta(text, names):
+    """Remove <meta name="..."> tags whose name is in names, leaving everything else as it was."""
+    names = set(names)
+
+    def sub(m):
+        for a in ATTR_RE.finditer(m.group(1)):
+            if a.group(1).lower() == "name":
+                value = next((v for v in a.group(2, 3, 4) if v is not None), "")
+                return "" if html.unescape(value) in names else m.group(0)
+        return m.group(0)
+
+    return META_TAG_RE.sub(sub, text or "")

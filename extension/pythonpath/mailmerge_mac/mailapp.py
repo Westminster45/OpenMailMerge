@@ -51,6 +51,7 @@ def explain(err):
 
 def enabled_accounts():
     """[(account name, full name, address)] for accounts switched on in Mail."""
+    osa('tell application "Mail" to launch')  # Mail's terms (account, enabled…) only compile once it's running
     out = osa(
         'tell application "Mail"\nset r to {}\n'
         "repeat with a in (every account whose enabled is true)\n"

@@ -7,10 +7,18 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import merge, message
+from . import merge, message, settings_check
 
 ATTACHMENT_WARN_BYTES = 20 * 1024 * 1024
 MAX_ROWS_LISTED = 8
+# Only these may sit between merge fields in Cc, Bcc or Reply-To without counting as a typed address.
+# Anything else (NBSP, zero-width characters...) counts as typed text.
+FIELD_SEPARATORS = frozenset(" \t\r\n,;")
+TYPED_ADDRESS_WARNINGS = {
+    "Cc": "Every email will also go to {} (Cc). If you didn't add this, remove it on page 2.",
+    "Bcc": "Every email will also be copied to {} (Bcc). If you didn't add this, remove it on page 2.",
+    "Reply-To": "Replies will go to {} instead of you. If that's not what you want, clear the Reply-To box on page 2.",
+}
 
 
 @dataclass
@@ -46,6 +54,13 @@ def rows(numbers):
     numbers = list(numbers)
     shown = ", ".join(str(n) for n in numbers[:MAX_ROWS_LISTED])
     return shown + (f" and {len(numbers) - MAX_ROWS_LISTED} more" if len(numbers) > MAX_ROWS_LISTED else "")
+
+
+def has_typed_address(value):
+    """True if an address box holds anything besides merge fields and plain separators, i.e. text that
+    goes into every email as typed (e.g. 'x+«RECORD_NUMBER»@example.com' or '«Manager», x@example.com')."""
+    rest = merge.template.FIELD_RE.sub("", value or "")
+    return any(ch not in FIELD_SEPARATORS for ch in rest)
 
 
 def check(settings, table, body_html, body_text, exclusions=frozenset(), now=None):
@@ -118,8 +133,12 @@ def check(settings, table, body_html, body_text, exclusions=frozenset(), now=Non
     if len(dups) > MAX_ROWS_LISTED:
         rep.warnings.append(f"...and {len(dups) - MAX_ROWS_LISTED} more duplicate To addresses.")
 
+    typed = {label: value for label, value in (("Cc", settings.cc), ("Bcc", settings.bcc), ("Reply-To", settings.reply_to))
+             if has_typed_address(value)}
+    for label, value in typed.items():
+        rep.warnings.append(TYPED_ADDRESS_WARNINGS[label].format(settings_check.one_line(value)))
     for label, value in (("Cc", settings.cc), ("Bcc", settings.bcc)):
-        if value.strip() and not merge.template.fields_in(value) and len(rep.emails) > 1:
+        if label not in typed and value.strip() and not merge.template.fields_in(value) and len(rep.emails) > 1:
             rep.warnings.append(
                 f"{label} has a fixed address, so it gets a copy of every email ({len(rep.emails)} copies).")
     return rep

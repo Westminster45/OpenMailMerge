@@ -10,8 +10,9 @@ from . import template
 # Characters not allowed in attachment file names.
 UNSAFE_NAME_RE = re.compile(r'[\\/:*?"<>|\r\n]+')
 
-# File types the attachment column may attach. Anything else (code, keys, files with no extension)
-# is blocked, so a data file can't make the merge send arbitrary files.
+# File types the attachment column and the fixed (every-email) attachments may attach. Anything else
+# (code, keys, files with no extension) is blocked, so a data file or the settings saved in a document
+# can't make the merge send arbitrary files.
 ATTACHMENT_TYPES = {
     ".pdf", ".doc", ".docx", ".odt", ".rtf", ".pages", ".txt", ".html", ".htm",
     ".csv", ".json", ".zip",
@@ -94,7 +95,8 @@ def attachment_paths(value):
             found.append(part)
         else:
             missing.append(part)
-    blocked = [p for p in found if Path(p).suffix.lower() not in ATTACHMENT_TYPES]
+    from .settings_check import is_key_file  # also blocked: the key for saved settings, even via a link
+    blocked = [p for p in found if Path(p).suffix.lower() not in ATTACHMENT_TYPES or is_key_file(p)]
     return [p for p in found if p not in blocked], missing, blocked
 
 
@@ -132,7 +134,12 @@ def render_email(settings, row, record_number, body_html, body_text, now=None):
         e.text = r(body_text)
 
     for path in settings.static_attachments:
-        (e.attachments if Path(path).is_file() else e.missing_attachments).append(path)
+        if not Path(path).is_file():
+            e.missing_attachments.append(path)
+        elif Path(path).suffix.lower() not in ATTACHMENT_TYPES:  # same type rule as the attachment column
+            e.blocked_attachments.append(path)
+        else:
+            e.attachments.append(path)
     if settings.attachment_column:
         found, missing, blocked = attachment_paths(row.get(settings.attachment_column, ""))
         e.attachments += found

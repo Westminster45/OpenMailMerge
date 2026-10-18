@@ -10,7 +10,7 @@ from pathlib import Path
 import uno
 from com.sun.star.beans import PropertyValue
 
-from . import data, template
+from . import data, settings_check, template
 
 SETTINGS_KEY = "MailMergeMacSettings"
 REMOVEABLE = 128
@@ -64,6 +64,22 @@ def read_table(ctx, path):
 
 # ---------- document as email template ----------
 
+def exported_image(folder, src):
+    """(path, mime) of the image file that src names inside folder, else None.
+
+    src comes from the exported HTML, so from the document: anything that resolves outside
+    folder (absolute path, ../, symlink) or isn't an image type is refused.
+    """
+    base = Path(folder).resolve()
+    f = (base / src).resolve()
+    if base not in f.parents or not f.is_file():
+        return None
+    mime = mimetypes.guess_type(f.name)[0]
+    if not mime or not mime.startswith("image/"):
+        return None
+    return f, mime
+
+
 def export_template(doc):
     """The document as (html, text), fields still unrendered. Images are embedded as data: URIs."""
     with tempfile.TemporaryDirectory() as d:
@@ -71,13 +87,18 @@ def export_template(doc):
         store(doc, html_path, "HTML (StarWriter)", "EmbedImages")
         store(doc, text_path, "Text (encoded)", "UTF8,LF,,,")
         html = html_path.read_text(encoding="utf-8", errors="replace")
+        # The HTML export writes every user-defined document property (including the saved
+        # merge settings) into <head> as <meta name=... content=...>; keep them out of emails.
+        udp = doc.getDocumentProperties().getUserDefinedProperties()
+        private = {p.Name for p in udp.getPropertySetInfo().getProperties()} | {SETTINGS_KEY}
+        html = template.drop_meta(html, private)
         text = text_path.read_text(encoding="utf-8", errors="replace").lstrip("﻿")
 
         def inline(m):  # images LibreOffice wrote as separate files
-            f = (Path(d) / m.group(3)).resolve()
-            if not f.is_file():
+            found = exported_image(d, m.group(3))
+            if not found:
                 return m.group(0)
-            mime = mimetypes.guess_type(f.name)[0] or "image/png"
+            f, mime = found
             b64 = base64.b64encode(f.read_bytes()).decode()
             return f"{m.group(1)}{m.group(2)}data:{mime};base64,{b64}{m.group(2)}"
 
@@ -147,6 +168,16 @@ def save_settings(doc, settings_dict):
             udp.setPropertyValue(SETTINGS_KEY, value)
     else:
         udp.addProperty(SETTINGS_KEY, REMOVEABLE, value)
+
+
+def settings_key_path(ctx):
+    """Where this user's key for signing saved settings lives (see settings_check): a file in the
+    LibreOffice user profile, never in a document. None if the profile folder can't be found."""
+    try:
+        subst = ctx.ServiceManager.createInstanceWithContext("com.sun.star.util.PathSubstitution", ctx)
+        return Path(path_from_url(subst.substituteVariables("$(user)", True))) / settings_check.KEY_FILE_NAME
+    except Exception:
+        return None
 
 
 # ---------- pickers ----------

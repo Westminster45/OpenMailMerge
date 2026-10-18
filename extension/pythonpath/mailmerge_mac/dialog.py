@@ -16,7 +16,7 @@ import uno
 import unohelper
 from com.sun.star.awt import XActionListener, XItemListener, XTopWindowListener
 
-from . import VERSION, campaign, debug, mailapp, merge, office, preflight
+from . import VERSION, campaign, debug, mailapp, merge, office, preflight, settings_check
 
 PAGES = ["1. Data", "2. Message", "3. Attachments", "4. Check & preview", "5. Create"]
 W, H = 340, 290
@@ -82,7 +82,8 @@ class MailMergeDialog:
         self.ctx, self.doc, self.frame = ctx, doc, frame
         self.smgr = ctx.ServiceManager
         self.toolkit = self.smgr.createInstanceWithContext("com.sun.star.awt.Toolkit", ctx)
-        self.settings = merge.Settings.from_dict(office.load_settings(doc))
+        self.settings_key = settings_check.load_key(office.settings_key_path(ctx))
+        self.settings = merge.Settings.from_dict(self.saved_settings(doc))
         self.table = None
         self.accounts = []  # (account, full name, address)
         self.report = None
@@ -101,6 +102,53 @@ class MailMergeDialog:
         self.dlg.setModel(self.model)
         self.build()
         self.apply_settings()
+
+    def saved_settings(self, doc):
+        """The settings saved in doc. Unless this user saved them (see settings_check), Cc, Bcc, Reply-To,
+        the files attached to every email and the PDF password stay blank unless the user agrees to them."""
+        use, held = settings_check.check_saved(office.load_settings(doc), self.settings_key)
+        if held:
+            debug(f"saved settings not verified; asking about: {', '.join(sorted(held))}")
+            try:
+                agreed = self.ask_saved_settings(settings_check.describe(held), settings_check.leave_blank_note(held))
+            except Exception:
+                debug("asking about saved settings failed:\n" + traceback.format_exc())
+                agreed = False
+            if agreed:
+                use = settings_check.restore(use, held)
+        return use
+
+    def ask_saved_settings(self, lines, note=""):
+        """Show the held-back settings, and note (if any) just above the buttons. True only if the user clicks
+        Use these settings; Leave these blank (the default button, focused first), Escape and the close box
+        all mean no."""
+        more = 12 if note else 0  # room for the note's line
+        m = self.smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialogModel", self.ctx)
+        m.Width, m.Height, m.Title = 260, 168 + more, "Check these saved settings"
+        d = self.smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialog", self.ctx)
+        d.setModel(m)
+        controls = [
+                ("FixedText", "p", 6, 6, 248, 36, {"MultiLine": True, "Label":
+                    "This document includes email settings that were saved on another computer, by someone else, "
+                    "or by an older version of OpenMailMerge. Please check you're happy to use them:"}),
+                ("Edit", "list", 6, 46, 248, 80, {"Text": "\n".join(lines), "MultiLine": True, "ReadOnly": True,
+                                                  "VScroll": True, "TabIndex": 2}),
+                ("FixedText", "later", 6, 130, 248, 10, {"Label": "You can change any of these later in the merge window."}),
+                ("Button", "use", 90, 148 + more, 80, 14, {"Label": "Use these settings", "PushButtonType": 1, "TabIndex": 1}),
+                ("Button", "blank", 174, 148 + more, 80, 14, {"Label": "Leave these blank", "PushButtonType": 2,
+                                                              "DefaultButton": True, "TabIndex": 0})]
+        if note:
+            controls.append(("FixedText", "note", 6, 142, 248, 10, {"Label": note}))
+        for kind, name, x, y, w, h, extra in controls:
+            cm = m.createInstance(f"com.sun.star.awt.UnoControl{kind}Model")
+            cm.PositionX, cm.PositionY, cm.Width, cm.Height = x, y, w, h
+            for k, v in extra.items():
+                setattr(cm, k, v)
+            m.insertByName(name, cm)
+        d.createPeer(self.toolkit, self.frame.getContainerWindow() if self.frame else None)
+        agreed = d.execute() == 1
+        d.dispose()
+        return agreed
 
     # ---------- small helpers ----------
 
@@ -382,7 +430,7 @@ class MailMergeDialog:
             s.record_from = s.record_to = 0
         s.exclusion_file = self.text("excl_file")
         s.require_offline = self.checked("req_offline")
-        office.save_settings(self.doc, dataclasses.asdict(s))
+        office.save_settings(self.doc, settings_check.sign(dataclasses.asdict(s), self.settings_key))
         return s
 
     def number(self, name):
@@ -702,14 +750,20 @@ class MailMergeDialog:
         what = {"drafts": f"Create {n} draft(s) in Apple Mail", "export": f"Export {n} .eml file(s)",
                 "outbox": f"SEND {n} email(s)"}[mode]
         cc = f"\nCc: {first.cc}" if first.cc else ""
+        atts = ([f"{first.pdf_name} (the letter as PDF)"] if self.settings.attach_pdf else []) + list(first.attachments)
+        atts = "".join(f"\n  • {a}" for a in atts) or " none"
         summary = (f"{what}\n\nFrom: {self.account_label(account)}\n"
-                   f"First email – To: {first.to}{cc}\nSubject: {first.subject}\n\n")
+                   f"First email – To: {first.to}{cc}\nSubject: {first.subject}\nAttachments:{atts}\n\n")
         offline = self.settings.require_offline
         summary += {"drafts": "Each email is put in Mail's Drafts. Nothing will be sent.",
                     "export": "Files go to Documents/OpenMailMerge. Nothing is sent.",
                     "outbox": ("With Mail offline, the emails wait in Mail's Outbox. They are sent when you "
                                "choose Mailbox > Take All Accounts Online." if offline else
                                "'Mail must be offline' is unticked, so the emails are sent straight away.")}[mode]
+        also = [f"{label}: {settings_check.one_line(value)}" for label, value in
+                (("Bcc", first.bcc), ("Reply-To", first.reply_to)) if settings_check.one_line(value)]
+        if also:
+            summary += "\n\nFirst email – " + "\n".join(also)
         if n > 100 and mode == "outbox":
             summary += ("\n\nNote: many providers limit how many emails you can send per day "
                         "(e.g. about 300 for Outlook.com, 500 for Gmail).")
