@@ -75,7 +75,7 @@ def check(settings, table, body_html, body_text, exclusions=frozenset(), now=Non
     elif settings.to_column not in table.headers:
         rep.errors.append(f"The To column '{settings.to_column}' isn't in the data.")
     if not settings.subject.strip():
-        rep.errors.append("The subject is empty.")
+        rep.warnings.append("The subject is empty.")
     if settings.attachment_column and settings.attachment_column not in table.headers:
         rep.errors.append(f"The attachment column '{settings.attachment_column}' isn't in the data.")
 
@@ -103,21 +103,21 @@ def check(settings, table, body_html, body_text, exclusions=frozenset(), now=Non
                     problems[("error", f"Invalid {label} address")].append(f"{n} ({addr})")
         for _, addr in to_pairs:
             to_seen[addr.lower()].append(n)
-        if not e.subject:
-            problems[("error", "Subject is empty after merging")].append(n)
+        if not e.subject and settings.subject.strip():  # an empty subject is already warned about above
+            problems[("warning", "Subject is empty after merging")].append(n)
         for name in e.missing_fields:
-            problems[("error", f"Field «{name}» doesn't match any column")].append(n)
+            problems[("warning", f"Field «{name}» doesn't match any column")].append(n)
         for where in e.leftovers:
-            problems[("error", f"{where} still contains « » or {{{{ }}}} after merging (a field may be split by formatting or mistyped)")].append(n)
+            problems[("warning", f"{where} still contains « » or {{{{ }}}} after merging (a field may be split by formatting or mistyped)")].append(n)
         for name in e.empty_fields:
             problems[("warning", f"Field «{name}» is empty")].append(n)
         for path in e.missing_attachments:
-            problems[("error", f"Attachment not found: {path}")].append(n)
+            problems[("warning", f"Attachment not found (the email goes without it): {path}")].append(n)
         for path in e.blocked_attachments:
             problems[("error", f"Attachment type not allowed (only documents, text, HTML, CSV, JSON, "
                                f"zip, spreadsheets, presentations, images, audio and video): {path}")].append(n)
         if settings.attach_pdf and not e.pdf_password and settings.pdf_password.strip():
-            problems[("error", "PDF password is empty after merging")].append(n)
+            problems[("warning", "PDF password is empty after merging (that PDF has no password)")].append(n)
         size = sum(Path(p).stat().st_size for p in e.attachments)
         total_size = max(total_size, size)
         if size > ATTACHMENT_WARN_BYTES:

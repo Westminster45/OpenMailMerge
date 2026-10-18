@@ -33,6 +33,7 @@ class Campaign:
         self.require_offline = require_offline
         self.pdf_maker = pdf_maker
         self.body_text = body_text
+        self.message_ids = {}  # id(email) -> Message-ID of what was handed to Mail
         self.log_path = self.folder / "log.csv"
         with self.log_path.open("w", newline="", encoding="utf-8") as f:
             csv.DictWriter(f, LOG_FIELDS).writeheader()
@@ -104,20 +105,25 @@ class Campaign:
                 self.log(e, "failed", why, eml=eml.name)
                 failed.append((e, why))
                 return done, failed, True
+            self.message_ids[id(e)] = mailapp.read_eml(eml)["message_id"]
             status = ("in Outbox" if self.require_offline else "sent") if self.mode == "outbox" else "draft created"
             self.log(e, status, eml=eml.name)
             done.append(e)
         return done, failed, False
 
     def verify_senders(self, emails):
-        """Check the drafts Mail saved use the chosen From address. Returns a list of problems."""
-        subjects = {e.subject for e in emails}
-        problems = []
+        """Check the drafts Mail saved use the chosen From address. Returns a list of problems.
+        Emails are found by Message-ID, so other drafts with the same (or an empty) subject don't count."""
         if self.mode == "outbox":
-            found = mailapp.drafts_matching(subjects, "outbox" if self.require_offline else "sent mailbox")
+            mailbox = "outbox" if self.require_offline else "sent mailbox"
         else:
-            found = mailapp.drafts_matching(subjects)
-        for subject, sender in found:
-            if self.sender[1].lower() not in sender.lower():
-                problems.append(f"'{subject}' was saved from {sender}")
+            mailbox = "drafts mailbox"
+        problems = []
+        for e in emails:
+            message_id = self.message_ids.get(id(e))
+            if not message_id:
+                continue
+            for sender in mailapp.senders_by_id(message_id, mailbox):
+                if self.sender[1].lower() not in sender.lower():
+                    problems.append(f"record {e.record_number} ('{e.subject}') was saved from {sender}")
         return problems

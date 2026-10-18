@@ -51,9 +51,9 @@ def explain(err):
 
 def enabled_accounts():
     """[(account name, full name, address)] for accounts switched on in Mail."""
-    osa('tell application "Mail" to launch')  # Mail's terms (account, enabled…) only compile once it's running
+    osa('tell application id "com.apple.mail" to launch')  # by bundle id: on some Macs Mail's terms (account…) don't compile when it's named
     out = osa(
-        'tell application "Mail"\nset r to {}\n'
+        'tell application id "com.apple.mail"\nset r to {}\n'
         "repeat with a in (every account whose enabled is true)\n"
         "set fn to full name of a\nif fn is missing value then set fn to \"\"\n"
         'repeat with e in (get email addresses of a)\nset end of r to (name of a) & tab & fn & tab & (contents of e)\nend repeat\n'
@@ -85,7 +85,7 @@ def offline_state():
 def check_permissions():
     """Raise MailError with instructions if Mail can't be automated."""
     try:
-        osa('tell application "Mail" to launch')
+        osa('tell application id "com.apple.mail" to launch')
         enabled_accounts()
         offline_state()
     except MailError as e:
@@ -137,7 +137,7 @@ def write_mbox(eml_paths, mbox_dir, strip_bcc=False):
 IMPORT = """on run argv
 	set {boxPath, innerName, topName, expected} to argv
 	set expected to expected as integer
-	tell application "Mail"
+	tell application id "com.apple.mail"
 		set existing to name of every mailbox
 		import Mail mailbox at (POSIX file boxPath)
 		set top to missing value
@@ -168,7 +168,7 @@ end run
 DELIVER = """on run argv
 	set {topName, innerName, msgId, theAction, fromAddr, toList, ccList, bccList} to argv
 	set AppleScript's text item delimiters to tab
-	tell application "Mail"
+	tell application id "com.apple.mail"
 		set ms to (messages of mailbox innerName of mailbox topName whose message id is msgId)
 		if (count of ms) is 0 then error "Couldn't find the email in Mail's mailbox " & topName & "."
 		set m to item 1 of ms
@@ -257,10 +257,20 @@ MAILBOXES = {"drafts mailbox", "outbox", "sent mailbox"}
 def count_by_id(message_id, mailbox="drafts mailbox"):
     """How many messages in Mail's Drafts / Outbox / Sent have this Message-ID (without <>)."""
     assert mailbox in MAILBOXES
-    out = osa('on run argv\ntell application "Mail" to '
+    out = osa('on run argv\ntell application id "com.apple.mail" to '
               f"return count (messages of {mailbox} whose message id is item 1 of argv)\nend run",
               timeout=60, args=[message_id])
     return int(out or 0)
+
+
+def senders_by_id(message_id, mailbox="drafts mailbox"):
+    """Senders of the messages in Mail's Drafts / Outbox / Sent with this Message-ID (without <>)."""
+    assert mailbox in MAILBOXES
+    out = osa('on run argv\ntell application id "com.apple.mail"\n'
+              f"set r to sender of (messages of {mailbox} whose message id is item 1 of argv)\n"
+              "end tell\nset AppleScript's text item delimiters to linefeed\nreturn r as text\nend run",
+              timeout=60, args=[message_id])
+    return [line for line in out.splitlines() if line]
 
 
 def drafts_matching(subjects, mailbox="drafts mailbox"):
@@ -269,7 +279,7 @@ def drafts_matching(subjects, mailbox="drafts mailbox"):
     assert mailbox in MAILBOXES
     found = []
     for subject in sorted(set(subjects)):
-        out = osa('on run argv\ntell application "Mail"\n'
+        out = osa('on run argv\ntell application id "com.apple.mail"\n'
                   f"set r to sender of (messages of {mailbox} whose subject is item 1 of argv)\n"
                   "end tell\nset AppleScript's text item delimiters to linefeed\nreturn r as text\nend run",
                   timeout=60, args=[subject])

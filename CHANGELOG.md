@@ -1,5 +1,18 @@
 # Release notes
 
+## 0.1.12
+
+**Bug fixes**
+- Fixed the error message ("Expected class name but found identifier") still appearing on some Macs when OpenMailMerge was opened while Apple Mail was not running.
+- The check that drafts use the right From address no longer gets confused by other drafts with the same or an empty subject.
+
+**Changes**
+- These no longer stop the merge. You get a warning and can continue:
+  - an empty subject
+  - a merge field that doesn't match any column, or « » / {{ }} left in the text
+  - an attachment that can't be found (the email goes without it)
+  - a PDF password that is empty for some recipients (their PDF has no password)
+
 ## 0.1.11
 
 **Bug fix**
