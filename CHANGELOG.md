@@ -4,8 +4,9 @@
 
 **Changes**
 - A ? button next to the PDF password explains what the password does and doesn't protect against.
+- An About link at the bottom of the merge window shows the version, these release notes and a link to the project page.
 
-## 0.1.12
+## 0.1.12 (18 October 2026)
 
 **Bug fixes**
 - Fixed the error message ("Expected class name but found identifier") still appearing on some Macs when OpenMailMerge was opened while Apple Mail was not running.
@@ -18,7 +19,7 @@
   - an attachment that can't be found (the email goes without it)
   - a PDF password that is empty for some recipients (their PDF has no password)
 
-## 0.1.11
+## 0.1.11 (18 October 2026)
 
 **Bug fix**
 - Fixed an error message ("Expected class name but found identifier") when OpenMailMerge was opened while Apple Mail was not running. Mail is now started automatically.
@@ -29,3 +30,7 @@
 - Files attached to every email are now limited to the same file types as per-recipient attachments.
 - Settings saved in a document on another computer, by someone else or by an older version of OpenMailMerge are now shown for you to confirm before any Bcc, Cc, Reply-To, attachments or PDF password are used. Documents you save yourself open as before.
 - You now get a warning when Cc, Bcc or Reply-To contains a typed address rather than only merge fields. The last check before sending also shows Bcc, Reply-To and the attachments.
+
+## 0.1.10 (17 October 2026)
+
+- First public release: mail merge from LibreOffice Writer to Apple Mail.

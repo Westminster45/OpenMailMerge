@@ -16,8 +16,9 @@ import uno
 import unohelper
 from com.sun.star.awt import XActionListener, XItemListener, XTopWindowListener
 
-from . import VERSION, campaign, debug, mailapp, merge, office, preflight, settings_check
+from . import VERSION, campaign, debug, mailapp, merge, office, preflight, release_notes, settings_check
 
+PROJECT_URL = "https://github.com/Westminster45/OpenMailMerge"
 PAGES = ["1. Data", "2. Message", "3. Attachments", "4. Check & preview", "5. Create"]
 W, H = 340, 290
 NONE = "(none)"
@@ -139,6 +140,11 @@ class MailMergeDialog:
                                                               "DefaultButton": True, "TabIndex": 0})]
         if note:
             controls.append(("FixedText", "note", 6, 142, 248, 10, {"Label": note}))
+        return self.run_small_dialog(m, d, controls) == 1
+
+    def run_small_dialog(self, m, d, controls):
+        """Add controls [(kind, name, x, y, w, h, {property: value})] to dialog d (model m), show it until
+        it's closed and return how it was closed (1 = the OK-type button)."""
         for kind, name, x, y, w, h, extra in controls:
             cm = m.createInstance(f"com.sun.star.awt.UnoControl{kind}Model")
             cm.PositionX, cm.PositionY, cm.Width, cm.Height = x, y, w, h
@@ -146,9 +152,26 @@ class MailMergeDialog:
                 setattr(cm, k, v)
             m.insertByName(name, cm)
         d.createPeer(self.toolkit, self.frame.getContainerWindow() if self.frame else None)
-        agreed = d.execute() == 1
+        result = d.execute()
         d.dispose()
-        return agreed
+        return result
+
+    def show_about(self):
+        m = self.smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialogModel", self.ctx)
+        m.Width, m.Height, m.Title = 260, 236, "About OpenMailMerge"
+        d = self.smgr.createInstanceWithContext("com.sun.star.awt.UnoControlDialog", self.ctx)
+        d.setModel(m)
+        self.run_small_dialog(m, d, [
+            ("FixedText", "name", 6, 6, 248, 12, {"Label": "OpenMailMerge", "FontWeight": BOLD}),
+            ("FixedText", "version", 6, 20, 248, 10, {"Label": f"Version {VERSION}"}),
+            ("FixedText", "what", 6, 32, 248, 10, {"Label": "Mail merge from LibreOffice Writer to Apple Mail."}),
+            ("FixedText", "licence", 6, 44, 248, 10, {"Label": "Free and open source, under the Mozilla Public License 2.0."}),
+            ("FixedHyperlink", "site", 6, 56, 248, 10, {"Label": "Project page, earlier versions and source code",
+                                                        "URL": PROJECT_URL}),
+            ("FixedText", "l_notes", 6, 74, 248, 10, {"Label": "Release notes and version history:"}),
+            ("Edit", "notes", 6, 86, 248, 124, {"Text": release_notes(), "MultiLine": True, "ReadOnly": True,
+                                                "VScroll": True}),
+            ("Button", "ok", 194, 216, 60, 14, {"Label": "Close", "PushButtonType": 1, "DefaultButton": True})])
 
     # ---------- small helpers ----------
 
@@ -379,7 +402,11 @@ class MailMergeDialog:
         self.button("stop", "Stop", self.request_stop, 6, 214, 60, page=p, Enabled=False)
         self.button("open_folder", "Open output folder", self.open_output_folder, 70, 214, 90, page=p)
 
-        self.label("status", "", 6, 264, 210, 20)
+        self.label("status", "", 6, 264, 180, 20)
+        about = self.add("FixedHyperlink", "about", 190, 270, 26, 10, Label="About", HelpText="Version and release notes")
+        listener = _Action(self, self.show_about)  # with a listener, a click runs it instead of opening a URL
+        self.listeners.append(listener)
+        about.addActionListener(listener)
         self.button("next", "Next ›", lambda: self.go(min(self.model.Step + 1, len(PAGES))), 220, 266, 56)
         self.button("close", "Close", self.close, 280, 266, 54)
         self.go(1)

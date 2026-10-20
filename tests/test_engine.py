@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extension" / "pythonpath"))
 
+import mailmerge_mac  # noqa: E402
 from mailmerge_mac import data, merge, message, preflight, template  # noqa: E402
 
 NOW = datetime(2026, 10, 16, 9, 30)
@@ -211,6 +212,17 @@ class MergeAndPreflightTests(unittest.TestCase):
     def test_settings_roundtrip_ignores_unknown(self):
         s = merge.Settings.from_dict({"subject": "x", "unknown": 1})
         self.assertEqual(s.subject, "x")
+
+
+class ReleaseNotesTest(unittest.TestCase):
+    def test_changelog_has_current_version(self):
+        notes = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn(f"\n## {mailmerge_mac.VERSION} ", notes)
+
+    def test_release_notes_are_plain_text(self):
+        text = mailmerge_mac.format_release_notes("# Release notes\n\n## 1.0 (1 May)\n\n**Fixes**\n- one\n  - two\n")
+        self.assertEqual(text, "1.0 (1 May)\n\nFixes\n  • one\n      – two\n")
+        self.assertIn("0.1.10", mailmerge_mac.release_notes())
 
 
 if __name__ == "__main__":
