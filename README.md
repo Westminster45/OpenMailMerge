@@ -34,11 +34,21 @@ Either way, Mail sends the email exactly as it was built. Mail never re-creates 
 - Apple Mail with at least one account set up.
 - On first use, macOS asks you to allow LibreOffice to control Mail and System Events, and to give it Accessibility access. Accessibility is used only to read Mail's offline state.
 
+### About the Accessibility permission
+
+macOS can't give Accessibility access to just one extension, so the permission goes to the whole of LibreOffice. LibreOffice keeps it until you switch it off, which lets any extension you install use it too.
+
+If you only merge now and then, you can switch it off when you've finished: **System Settings › Privacy & Security › Accessibility**, then turn off LibreOffice. Turn it back on before your next merge. OpenMailMerge tells you if it's missing.
+
 ## Install
 
 1. Download `OpenMailMerge.oxt` from [Releases](../../releases).
 2. In LibreOffice, choose **Tools › Extensions › Add…** and pick the downloaded file.
 3. In a Writer document, choose **Tools › Add-Ons › Mail Merge to Apple Mail…**, or click the envelope button on the OpenMailMerge toolbar.
+
+### Going back to an earlier version
+
+If an update causes a problem, every earlier version is kept on the [Releases](../../releases) page. Download the `OpenMailMerge.oxt` from the version you want, then in **Tools › Extensions** remove OpenMailMerge and add the older file. Versions before 0.1.11 are missing security fixes, so avoid going back further than that.
 
 ## Build from source
 

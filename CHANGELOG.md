@@ -1,5 +1,10 @@
 # Release notes
 
+## Unreleased
+
+**Changes**
+- A ? button next to the PDF password explains what the password does and doesn't protect against.
+
 ## 0.1.12
 
 **Bug fixes**

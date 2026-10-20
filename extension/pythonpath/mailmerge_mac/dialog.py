@@ -313,7 +313,9 @@ class MailMergeDialog:
         self.button("f_pdf_name", "…", lambda: self.insert_field_into("pdf_name"), 318, 158, 16, 12, page=p,
                     HelpText="Insert a merge field")
         self.label("l_pdfpw", "PDF password:", 16, 176, 70, page=p)
-        self.edit("pdf_password", 90, 174, 224, page=p)
+        self.edit("pdf_password", 90, 174, 206, page=p)
+        self.button("pdf_password_help", "?", self.explain_pdf_password, 300, 174, 14, 12, page=p,
+                    HelpText="How safe is the PDF password?")
         self.button("f_pdf_password", "…", lambda: self.insert_field_into("pdf_password"), 318, 174, 16, 12, page=p,
                     HelpText="Insert a merge field")
         self.label("l_pdfpwhint", "Optional. Can be a field, e.g. «Postcode», so each person gets their own password.", 90, 188, 244, page=p)
@@ -442,6 +444,17 @@ class MailMergeDialog:
         for name in ("l_pdfname", "pdf_name", "l_pdfpw", "pdf_password", "l_pdfpwhint", "l_pdfbody", "pdf_body",
                      "f_pdf_name", "f_pdf_password", "f_pdf_body"):
             self.c(name).setEnable(on)
+
+    def explain_pdf_password(self):
+        self.msg("The password stops people opening the PDF without it, for example if the email "
+                 "goes to the wrong person or is forwarded on.\n\n"
+                 "It is not strong protection:\n"
+                 "• The password is saved in this document as plain text. Anyone with a copy of the "
+                 "document can find it.\n"
+                 "• If you use a field such as «Postcode» or a date of birth, anyone who knows or can "
+                 "guess that detail can open the PDF.\n\n"
+                 "Think of it as a lock against casual looking, not as a way to keep sensitive "
+                 "information secure.", title="About the PDF password")
 
     # ---------- page 1: data ----------
 
