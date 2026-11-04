@@ -13,6 +13,13 @@ from . import mailapp, message
 
 OUTPUT_ROOT = Path.home() / "Documents" / "OpenMailMerge"
 LOG_FIELDS = ["time", "record", "to", "cc", "bcc", "subject", "attachments", "status", "detail", "eml"]
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def log_cell(value):
+    """A log value made safe to open in a spreadsheet: text that would start a formula gets a leading '."""
+    value = "" if value is None else str(value)
+    return "'" + value if value.startswith(FORMULA_START) else value
 
 
 def campaign_folder(title, prefix=""):
@@ -39,12 +46,12 @@ class Campaign:
             csv.DictWriter(f, LOG_FIELDS).writeheader()
 
     def log(self, e, status, detail="", eml=""):
+        row = {"time": datetime.now().isoformat(timespec="seconds"), "record": e.record_number,
+               "to": e.to, "cc": e.cc, "bcc": e.bcc, "subject": e.subject,
+               "attachments": "; ".join(Path(a).name for a in e.attachments),
+               "status": status, "detail": detail, "eml": eml}
         with self.log_path.open("a", newline="", encoding="utf-8") as f:
-            csv.DictWriter(f, LOG_FIELDS).writerow({
-                "time": datetime.now().isoformat(timespec="seconds"), "record": e.record_number,
-                "to": e.to, "cc": e.cc, "bcc": e.bcc, "subject": e.subject,
-                "attachments": "; ".join(Path(a).name for a in e.attachments),
-                "status": status, "detail": detail, "eml": eml})
+            csv.DictWriter(f, LOG_FIELDS).writerow({k: log_cell(v) for k, v in row.items()})
 
     def write_eml(self, e, index, unsent=True):
         attachments = list(e.attachments)

@@ -15,7 +15,9 @@ email. Needs macOS permissions for LibreOffice: Automation (Mail, System Events)
 (only to read Mail's offline state).
 """
 
+import os
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -25,13 +27,23 @@ class MailError(Exception):
 
 
 def osa(script, timeout=30, args=()):
-    """Run AppleScript. Text is passed as arguments (argv), never pasted into the script source."""
+    """Run AppleScript. Text is passed as arguments (argv), never pasted into the script source.
+
+    The script goes in a file, not after -e: osascript reads options until its first plain argument,
+    so with -e an argument such as a subject starting with "-e" could be read as more script.
+    After a script file name, every argument is data.
+    """
+    fd, script_path = tempfile.mkstemp(suffix=".applescript")
     try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(script)
         # Bytes in, bytes out: LibreOffice's Python may run with an ASCII locale, so never rely on it.
-        cmd = ["osascript", "-e", script, *args]
+        cmd = ["osascript", script_path, *args]
         p = subprocess.run([c.encode("utf-8") for c in cmd], capture_output=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         raise MailError("Apple Mail didn't respond in time.")
+    finally:
+        os.unlink(script_path)
     if p.returncode != 0:
         raise MailError(p.stderr.decode("utf-8", "replace").strip())
     return p.stdout.decode("utf-8", "replace").strip()

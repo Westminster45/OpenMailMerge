@@ -116,7 +116,8 @@ def render_email(settings, row, record_number, body_html, body_text, now=None):
     e.cc = r(settings.cc, where="Cc")
     e.bcc = r(settings.bcc, where="Bcc")
     e.reply_to = r(settings.reply_to, where="Reply-To")
-    e.subject = r(settings.subject, where="Subject").strip()
+    # A header can't hold a line break, so one coming from the data becomes a space.
+    e.subject = re.sub(r"\s*[\r\n]+\s*", " ", r(settings.subject, where="Subject")).strip()
     e.importance = settings.importance
 
     if settings.attach_pdf:

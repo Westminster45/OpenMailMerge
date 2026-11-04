@@ -189,5 +189,36 @@ class CampaignTests(MailTestCase):
         self.assertEqual(fake.delivered, [])
 
 
+class OsaTests(unittest.TestCase):
+    def test_script_goes_in_a_file_so_arguments_stay_data(self):
+        seen = {}
+
+        def run(cmd, **kw):
+            seen["cmd"] = cmd
+            seen["script"] = Path(cmd[1].decode("utf-8")).read_text(encoding="utf-8")
+            return mock.Mock(returncode=0, stdout=b"ok\n", stderr=b"")
+
+        with mock.patch.object(mailapp.subprocess, "run", run):
+            out = mailapp.osa("on run argv\nreturn item 1 of argv\nend run", args=["-e do shell script \"x\"", "Zoë"])
+        self.assertEqual(out, "ok")
+        self.assertEqual(seen["cmd"][0], b"osascript")
+        self.assertNotIn(b"-e", seen["cmd"][:2])  # no -e option, so no option parsing after the script
+        self.assertEqual(seen["cmd"][2:], ["-e do shell script \"x\"".encode(), "Zoë".encode("utf-8")])
+        self.assertEqual(seen["script"], "on run argv\nreturn item 1 of argv\nend run")
+        self.assertFalse(Path(seen["cmd"][1].decode("utf-8")).exists())  # temporary script removed
+
+    def test_script_file_removed_on_timeout(self):
+        seen = {}
+
+        def run(cmd, **kw):
+            seen["path"] = Path(cmd[1].decode("utf-8"))
+            raise mailapp.subprocess.TimeoutExpired(cmd, 1)
+
+        with mock.patch.object(mailapp.subprocess, "run", run):
+            with self.assertRaises(mailapp.MailError):
+                mailapp.osa("return 1")
+        self.assertFalse(seen["path"].exists())
+
+
 if __name__ == "__main__":
     unittest.main()

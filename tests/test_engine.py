@@ -71,6 +71,13 @@ class DataTests(unittest.TestCase):
         self.assertEqual(t.headers, ["Name", "Email"])
         self.assertEqual([r["Name"] for r in t.rows], ["Zoë", "Bob"])
 
+    def test_csv_undecodable_gives_clear_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "x.csv"
+            p.write_bytes(b"Name,Email\n\x81\xff,z@x.com\n")  # neither UTF-8 nor cp1252
+            with self.assertRaisesRegex(ValueError, "Couldn't read x.csv"):
+                data.read_csv(p)
+
     def test_matrix_duplicate_and_blank_headers(self):
         t = data.from_matrix([["", ""], ["A", "", "A"], ["1", "2", "3"]])
         self.assertEqual(t.headers, ["A", "Column2", "A_"])
@@ -207,6 +214,30 @@ class MergeAndPreflightTests(unittest.TestCase):
         parsed = email.message_from_bytes(eml.read_bytes(), policy=policy.default)
         self.assertEqual((parsed["From"], parsed["To"], parsed["Subject"]), ("Me <me@example.com>", "zoe@example.com", "Hello Zoë"))
         self.assertIn("exported", (Path(self.dir.name) / "log.csv").read_text())
+
+    def test_subject_line_break_becomes_space(self):
+        row = {"First_Name": "Zoë\r\n  Smith", "Email": "zoe@example.com"}
+        e = merge.render_email(self.s, row, 1, "<p>x</p>", "x", now=NOW)
+        self.assertEqual(e.subject, "Hello Zoë Smith")
+        message.build(("Me", "me@example.com"), e.to, e.subject, e.html, e.text)  # header accepted
+
+    def test_log_escapes_formulas(self):
+        import csv
+        from mailmerge_mac import campaign
+        self.assertEqual(campaign.log_cell("=HYPERLINK(\"x\")"), "'=HYPERLINK(\"x\")")
+        self.assertEqual([campaign.log_cell(v) for v in ("+1", "-2", "@a", "\tb", "ok", 3, None)],
+                         ["'+1", "'-2", "'@a", "'\tb", "ok", "3", ""])
+        s = merge.Settings(from_address="me@example.com", to_column="Email", subject="«Subject»")
+        rep = preflight.check(s, data.from_matrix([["Subject", "Email"], ["=1+1", "zoe@example.com"]]), "<p>x</p>", "x")
+        job = campaign.Campaign(Path(self.dir.name), ("Me", "me@example.com"), "export")
+        (Path(self.dir.name) / "emails").mkdir()
+        job.run(rep.emails)
+        with (Path(self.dir.name) / "log.csv").open(newline="", encoding="utf-8") as f:
+            logged = list(csv.DictReader(f))
+        self.assertEqual(logged[0]["subject"], "'=1+1")
+        eml = next((Path(self.dir.name) / "emails").glob("*.eml"))
+        parsed = email.message_from_bytes(eml.read_bytes(), policy=policy.default)
+        self.assertEqual(parsed["Subject"], "=1+1")  # only the log is changed, not the email
 
     def test_settings_roundtrip_ignores_unknown(self):
         s = merge.Settings.from_dict({"subject": "x", "unknown": 1})
