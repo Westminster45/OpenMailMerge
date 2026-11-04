@@ -839,7 +839,7 @@ class MailMergeDialog:
         if mode == "outbox" and done and s.require_offline:
             lines.append("\nNothing has been sent yet. Check the Outbox in Mail, then choose "
                          "Mailbox > Take All Accounts Online to send. To cancel, delete them from the Outbox first.\n"
-                         "Mail sometimes reconnects on its own and would then send them. "
+                         "Mail sometimes reconnects on its own and then sends them. "
                          "To prevent this, turn off Wi-Fi until you've checked them.")
         lines.append(f"\nLog and files: {folder}")
         self.set_label("progress", "\n".join(lines))
