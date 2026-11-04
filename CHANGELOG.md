@@ -6,7 +6,7 @@
 - A ? button next to the PDF password explains what the password does and doesn't protect against.
 - A line break in the data used in the subject becomes a space, so that email is no longer stopped with an error.
 - In log.csv, a value starting with =, +, -, @ or a tab is given a leading ' so a spreadsheet shows it as text instead of running it as a formula. The emails themselves are unchanged.
-- After Send… with "Mail must be offline" ticked, the Finished message warns that Mail sometimes reconnects on its own, and suggests turning off Wi-Fi until you've checked the Outbox.
+- After Send… with "Mail must be offline" ticked, the Finished message warns that Mail sometimes reconnects on its own, and suggests turning off Wi-Fi until you're ready to send them.
 
 **Bug fixes**
 - A CSV file that is neither UTF-8 nor Windows text now gives a clear message asking for CSV UTF-8, instead of an internal error.
