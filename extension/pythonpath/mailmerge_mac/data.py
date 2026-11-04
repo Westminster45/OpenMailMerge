@@ -49,6 +49,8 @@ def read_csv(path):
             break
         except UnicodeDecodeError:
             continue
+    else:
+        raise ValueError(f"Couldn't read {Path(path).name}: save it as CSV UTF-8 and try again.")
     sample = text[:4096]
     try:
         dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
