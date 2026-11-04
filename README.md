@@ -13,7 +13,7 @@ Write your letter in Writer and choose a list of recipients. OpenMailMerge turns
 - Every email is checked before anything is created: invalid or duplicate addresses, empty or unknown fields, and missing attachments.
 - **Show in Mail** previews the first email.
 - **Create drafts** puts every email in your account's Drafts folder for you to review and send. Nothing is sent.
-- **Send** sends every email. With "Mail must be offline" ticked, the emails wait in Mail's Outbox until you take Mail online.
+- **Send** sends every email. With "Mail must be offline" ticked, the emails wait in Mail's Outbox until you take Mail online. Mail can go back online by itself, which sends them, so you may want to disconnect your Mac from the internet until you've checked the Outbox.
 - **Export .eml only** saves the emails as files.
 - Large batches and every Send need a typed confirmation. Every email is logged in `~/Documents/OpenMailMerge`.
 
