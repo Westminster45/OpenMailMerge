@@ -5,6 +5,10 @@ on:
   push:
   pull_request:
 
+# Checking out and running the tests only needs to read the repository.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-24.04  # ubuntu-latest (26.04) has no Python 3.9
