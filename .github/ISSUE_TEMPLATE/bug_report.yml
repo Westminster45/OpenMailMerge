@@ -1,0 +1,56 @@
+name: Bug report
+description: Something doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove any real names, email addresses or other personal data before submitting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include any error message shown.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a Writer document
+        2. Choose Tools › Add-Ons › Mail Merge to Apple Mail…
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+  - type: input
+    id: omm-version
+    attributes:
+      label: OpenMailMerge version
+      placeholder: "0.1.13"
+    validations:
+      required: true
+  - type: input
+    id: lo-version
+    attributes:
+      label: LibreOffice version
+      placeholder: "24.8.4"
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "15.2"
+    validations:
+      required: true
+  - type: input
+    id: account
+    attributes:
+      label: Mail account type
+      placeholder: iCloud, Gmail, Outlook.com, other
